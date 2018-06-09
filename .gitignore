@@ -1,0 +1,6 @@
+node_modules/
+dist/
+output/
+*.js.map
+.DS_Store
+*.tsbuildinfo
