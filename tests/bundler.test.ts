@@ -1,27 +1,89 @@
 import { describe, it, expect } from 'vitest';
-import { Bundler } from '../src/bundler';
+import { bundle } from '../src/bundler';
+import { buildGraph } from '../src/graph';
+import { BundlerConfig } from '../src/types';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 
-describe('Bundler', () => {
-  it('creates bundle instance', () => {
-    const b = new Bundler({ entry: './src/index.js' });
-    expect(b).toBeDefined();
-  });
-  it('resolves entry point', () => {
-    const b = new Bundler({ entry: './examples/src/index.js' });
-    expect(b.entryPoint).toContain('index');
-  });
-  it('accepts plugins', () => {
-    const b = new Bundler({
-      entry: './src/index.js',
-      plugins: [{ name: 'test', load: () => null }],
+function createTempFiles(files: Record<string, string>): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bundler-test-'));
+  for (const [name, content] of Object.entries(files)) {
+    const filePath = path.join(dir, name);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, content, 'utf-8');
+  }
+  return dir;
+}
+
+describe('bundle', () => {
+  it('generates CJS bundle', () => {
+    const dir = createTempFiles({
+      'index.js': 'export const x = 1;',
     });
-    expect(b.plugins).toHaveLength(1);
+    const graph = buildGraph(path.join(dir, 'index.js'));
+    const config: BundlerConfig = {
+      entry: path.join(dir, 'index.js'),
+      output: path.join(dir, 'out.js'),
+      format: 'cjs',
+      minify: false,
+      sourcemap: false,
+    };
+    const result = bundle(graph, config);
+    expect(result).toContain('use strict');
+    expect(result).toContain('__require');
+    expect(result).toContain('__modules');
   });
-  it('accepts output options', () => {
-    const b = new Bundler({
-      entry: './src/index.js',
-      output: { file: 'dist/bundle.js', format: 'esm' },
+
+  it('generates ESM bundle', () => {
+    const dir = createTempFiles({
+      'index.js': 'export const x = 1;',
     });
-    expect(b.outputOptions.format).toBe('esm');
+    const graph = buildGraph(path.join(dir, 'index.js'));
+    const config: BundlerConfig = {
+      entry: path.join(dir, 'index.js'),
+      output: path.join(dir, 'out.js'),
+      format: 'esm',
+      minify: false,
+      sourcemap: false,
+    };
+    const result = bundle(graph, config);
+    expect(result).toContain('export default');
+  });
+
+  it('generates IIFE bundle with global name', () => {
+    const dir = createTempFiles({
+      'index.js': 'export const x = 1;',
+    });
+    const graph = buildGraph(path.join(dir, 'index.js'));
+    const config: BundlerConfig = {
+      entry: path.join(dir, 'index.js'),
+      output: path.join(dir, 'out.js'),
+      format: 'iife',
+      minify: false,
+      sourcemap: false,
+      globalName: 'MyLib',
+    };
+    const result = bundle(graph, config);
+    expect(result).toContain('var MyLib');
+    expect(result).toContain('(function()');
+  });
+
+  it('bundles multiple modules', () => {
+    const dir = createTempFiles({
+      'index.js': "import { foo } from './lib.js';\nexport const x = foo;",
+      'lib.js': 'export const foo = 42;',
+    });
+    const graph = buildGraph(path.join(dir, 'index.js'));
+    const config: BundlerConfig = {
+      entry: path.join(dir, 'index.js'),
+      output: path.join(dir, 'out.js'),
+      format: 'cjs',
+      minify: false,
+      sourcemap: false,
+    };
+    const result = bundle(graph, config);
+    expect(result).toContain('__modules[0]');
+    expect(result).toContain('__modules[1]');
   });
 });

@@ -1,44 +1,50 @@
 import { describe, it, expect } from 'vitest';
-import { parseImports, parseExports } from '../src/parser';
+import { parseSource } from '../src/parser';
 
 describe('parser', () => {
-  describe('parseImports', () => {
+  describe('parseSource - dependencies', () => {
     it('detects named imports', () => {
-      const result = parseImports("import { foo, bar } from './utils';");
-      expect(result).toHaveLength(1);
-      expect(result[0].source).toBe('./utils');
-      expect(result[0].specifiers).toContain('foo');
+      const result = parseSource("import { foo, bar } from './utils';", '/project/src/index.js');
+      expect(result.dependencies).toHaveLength(1);
+      expect(result.dependencies[0].specifier).toBe('./utils');
+      expect(result.dependencies[0].importedNames).toContain('foo');
     });
     it('detects default imports', () => {
-      const result = parseImports("import React from 'react';");
-      expect(result[0].default).toBe('React');
+      const result = parseSource("import React from 'react';", '/project/src/index.js');
+      expect(result.dependencies[0].isDefault).toBe(true);
+      expect(result.dependencies[0].importedNames).toContain('default');
     });
-    it('detects namespace imports', () => {
-      const result = parseImports("import * as utils from './utils';");
-      expect(result[0].namespace).toBe('utils');
+    it('detects dynamic imports', () => {
+      const result = parseSource("import('./utils');", '/project/src/index.js');
+      expect(result.dependencies[0].isDynamic).toBe(true);
+      expect(result.dependencies[0].specifier).toBe('./utils');
     });
-    it('detects side-effect imports', () => {
-      const result = parseImports("import './polyfill';");
-      expect(result[0].source).toBe('./polyfill');
-      expect(result[0].sideEffect).toBe(true);
+    it('detects CommonJS requires', () => {
+      const result = parseSource("const utils = require('./utils');", '/project/src/index.js');
+      expect(result.dependencies).toHaveLength(1);
+      expect(result.dependencies[0].specifier).toBe('./utils');
     });
     it('handles multiple imports', () => {
       const code = "import { a } from './a';\nimport { b } from './b';";
-      expect(parseImports(code)).toHaveLength(2);
+      const result = parseSource(code, '/project/src/index.js');
+      expect(result.dependencies).toHaveLength(2);
     });
   });
-  describe('parseExports', () => {
+  describe('parseSource - exports', () => {
     it('detects named exports', () => {
-      const result = parseExports('export const foo = 42;');
-      expect(result).toContain('foo');
+      const result = parseSource('export const foo = 42;', '/project/src/index.js');
+      const names = result.exports.map((e) => e.name);
+      expect(names).toContain('foo');
     });
     it('detects default export', () => {
-      const result = parseExports('export default function main() {}');
-      expect(result).toContain('default');
+      const result = parseSource('export default function main() {}', '/project/src/index.js');
+      const names = result.exports.map((e) => e.name);
+      expect(names).toContain('default');
     });
     it('detects re-exports', () => {
-      const result = parseExports("export { foo } from './utils';");
-      expect(result).toContain('foo');
+      const result = parseSource("export { foo } from './utils';", '/project/src/index.js');
+      const names = result.exports.map((e) => e.name);
+      expect(names).toContain('foo');
     });
   });
 });

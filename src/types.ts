@@ -88,3 +88,14 @@ export interface ParseResult {
   source: string;
   hasCircularRisk: boolean;
 }
+
+/**
+ * Plugin interface for extending the bundler.
+ */
+export interface Plugin {
+  name: string;
+  extensions?: string[];
+  load?(id: string): string | null;
+  transform?(code: string, id: string): string | null;
+  buildEnd?(): { type: string; fileName: string; source: string } | null;
+}

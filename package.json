@@ -10,7 +10,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
-    "bundle:example": "node dist/index.js bundle --entry examples/src/index.js --output output/bundle.js --format iife"
+    "bundle:example": "node dist/index.js bundle --entry examples/src/index.js --output output/bundle.js --format iife",
+    "test": "vitest run"
   },
   "keywords": ["bundler", "module", "javascript", "educational"],
   "author": "",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "typescript": "^4.5.4",
-    "@types/node": "^16.11.12"
+    "@types/node": "^16.11.12",
+    "vitest": "^2.0.0"
   }
 }
