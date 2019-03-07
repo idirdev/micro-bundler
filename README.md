@@ -192,3 +192,22 @@ MIT
 
 - Dynamic imports not yet supported
 - CSS modules require a plugin
+
+---
+
+## 🇫🇷 Documentation en français
+
+### Description
+micro-bundler est un bundler de modules JavaScript construit de zéro à des fins éducatives. Il permet de comprendre le fonctionnement interne d'outils comme Webpack, Rollup et Parcel en explorant la résolution de dépendances, la création du graphe de modules et la génération du bundle final. Un projet idéal pour tout développeur souhaitant maîtriser les mécanismes des outils de build modernes.
+
+### Installation
+```bash
+npm install
+```
+
+### Utilisation
+```bash
+npm run build
+node dist/cli.js ./src/index.js -o bundle.js
+```
+Consultez la documentation en anglais ci-dessus pour comprendre l'architecture du bundler et les étapes de traitement des modules.
