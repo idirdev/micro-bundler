@@ -19,14 +19,11 @@ export function buildGraph(entryPath: string): Graph {
 
   // BFS queue
   const queue: string[] = [entryPath];
-  const inProgress = new Set<string>();
 
   while (queue.length > 0) {
     const filePath = queue.shift()!;
 
     if (visited.has(filePath)) continue;
-
-    inProgress.add(filePath);
 
     const source = fs.readFileSync(filePath, 'utf-8');
     const parseResult = parseSource(source, filePath);
@@ -50,12 +47,6 @@ export function buildGraph(entryPath: string): Graph {
         mod.dependencies.push(resolvedDep);
         neighbors.push(resolvedPath);
 
-        // Detect circular dependencies
-        if (inProgress.has(resolvedPath)) {
-          circularDeps.push([filePath, resolvedPath]);
-          console.warn(`[micro-bundler] Circular dependency detected: ${filePath} <-> ${resolvedPath}`);
-        }
-
         if (!visited.has(resolvedPath)) {
           queue.push(resolvedPath);
         }
@@ -67,18 +58,52 @@ export function buildGraph(entryPath: string): Graph {
     adjacencyList.set(filePath, neighbors);
     visited.set(filePath, mod);
     modules.push(mod);
-    inProgress.delete(filePath);
   }
+
+  // Detect circular dependencies using DFS after the full graph is built
+  detectCycles(adjacencyList, circularDeps);
 
   // Mark used exports (basic tree-shaking)
   markUsedExports(modules);
 
-  // Topological sort
+  // Topological sort (dependency-first order)
   const sortedModules = topologicalSort(modules, adjacencyList);
 
   const entryModule = modules.find((m) => m.isEntry)!;
 
   return { modules, adjacencyList, sortedModules, entryModule, circularDeps };
+}
+
+/**
+ * Detect cycles in the directed graph using DFS coloring.
+ * Adds detected back-edges to the circularDeps array.
+ */
+function detectCycles(
+  adjacencyList: Map<string, string[]>,
+  circularDeps: [string, string][]
+): void {
+  // 0 = unvisited, 1 = in-stack (gray), 2 = done (black)
+  const color = new Map<string, number>();
+
+  function dfs(node: string): void {
+    color.set(node, 1); // gray: currently on stack
+    for (const neighbor of adjacencyList.get(node) || []) {
+      const c = color.get(neighbor) ?? 0;
+      if (c === 1) {
+        // Back edge → cycle
+        circularDeps.push([node, neighbor]);
+      } else if (c === 0) {
+        dfs(neighbor);
+      }
+    }
+    color.set(node, 2); // black: done
+  }
+
+  for (const node of adjacencyList.keys()) {
+    if ((color.get(node) ?? 0) === 0) {
+      dfs(node);
+    }
+  }
 }
 
 /**
@@ -107,7 +132,7 @@ function markUsedExports(modules: Module[]): void {
 
 /**
  * Perform a topological sort on the module graph using Kahn's algorithm.
- * Returns modules in dependency-first order.
+ * Returns modules in dependency-first order (leaves before their importers).
  */
 function topologicalSort(modules: Module[], adjacencyList: Map<string, string[]>): Module[] {
   const moduleByPath = new Map(modules.map((m) => [m.filePath, m]));
@@ -150,5 +175,6 @@ function topologicalSort(modules: Module[], adjacencyList: Map<string, string[]>
     }
   }
 
-  return result;
+  // Reverse to get dependency-first order (leaves before importers)
+  return result.reverse();
 }
