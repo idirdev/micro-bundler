@@ -9,6 +9,16 @@ import { watchFiles } from './watcher';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Library re-exports
+export { parseSource } from './parser';
+export { resolveModule } from './resolver';
+export { buildGraph } from './graph';
+export { bundle } from './bundler';
+export { minify } from './minifier';
+export { transformModule } from './transformer';
+export { SourceMapGenerator } from './sourcemap';
+export { watchFiles } from './watcher';
+
 const program = new Command();
 
 program

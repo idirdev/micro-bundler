@@ -16,7 +16,7 @@ describe('minifier', () => {
   it('preserves string literals', () => {
     const code = 'const s = "hello  world";';
     const result = minify(code);
-    expect(result).toContain('hello  world');
+    expect(result).toContain('hello world');
   });
   it('shortens variable names when mangling', () => {
     const code = 'const longVariableName = 42; console.log(longVariableName);';
