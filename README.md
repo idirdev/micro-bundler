@@ -187,3 +187,8 @@ This is an educational project. It does not handle:
 ## License
 
 MIT
+
+## Known Limitations
+
+- Dynamic imports not yet supported
+- CSS modules require a plugin
